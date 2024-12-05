@@ -25,6 +25,11 @@ We are a group of students at UET - VNU.
 | 1   | 22028235   | Vũ Tùng Lâm      |
 | 2   | 22028182   | Nguyễn Văn Thiện |
 | 3   | 22028189   | Lê Thành Đạt     |
+| 4   | 22028332   | Nguyễn Phương Anh|
+| 5   | 22025517   | Nguyễn Minh Châu |
+| 6   | 22028092   | Ngô Tùng Lâm     |
+| 7   | 22028053   | Tạ Việt Anh      |
+| 8   | 22021149   | Vi Văn Quân   |
 
 ## Setup
 
