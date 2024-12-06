@@ -3,10 +3,6 @@
 - [CryptoToolsLtd](#cryptotoolsltd)
   - [Authors](#authors)
   - [Setup](#setup)
-    - [Using Docker](#using-docker)
-      - [Docker: Prerequisites](#docker-prerequisites)
-      - [Docker: Build the Image](#docker-build-the-image)
-      - [Docker: Launch the App](#docker-launch-the-app)
     - [Running Bare Metal](#running-bare-metal)
       - [Bare Metal: Prerequisites](#bare-metal-prerequisites)
       - [Bare Metal: Install Python Packages](#bare-metal-install-python-packages)
@@ -20,47 +16,18 @@
 
 We are a group of students at UET - VNU.
 
-| #   | Student ID | Name             |
-| --- | ---------- | ---------------- |
-| 1   | 22028235   | Vũ Tùng Lâm      |
-| 2   | 22028182   | Nguyễn Văn Thiện |
-| 3   | 22028189   | Lê Thành Đạt     |
-| 4   | 22028332   | Nguyễn Phương Anh|
-| 5   | 22025517   | Nguyễn Minh Châu |
-| 6   | 22028092   | Ngô Tùng Lâm     |
-| 7   | 22028053   | Tạ Việt Anh      |
-| 8   | 22021149   | Vi Văn Quân   |
+| #   | Student ID | Name              |
+| --- | ---------- | ----------------- |
+| 1   | 22028235   | Vũ Tùng Lâm       |
+| 2   | 22028182   | Nguyễn Văn Thiện  |
+| 3   | 22028189   | Lê Thành Đạt      |
+| 4   | 22028332   | Nguyễn Phương Anh |
+| 5   | 22025517   | Nguyễn Minh Châu  |
+| 6   | 22028092   | Ngô Tùng Lâm      |
+| 7   | 22028053   | Tạ Việt Anh       |
+| 8   | 22021149   | Vi Văn Quân       |
 
 ## Setup
-
-Using Docker is easier!
-
-### Using Docker
-
-#### Docker: Prerequisites
-
-- Docker (tested with version 27.3.1, Ubuntu 22.04)
-
-#### Docker: Build the Image
-
-This step is done only once. In the project root, run:
-
-```sh
-docker compose build
-```
-
-If something fails, try adding the magic word `sudo` (Linux)
-or running the command as admin (Windows).
-
-#### Docker: Launch the App
-
-When the previous setup steps have been done,
-now whenever you need to run the app, just
-enter this one command (at the project root):
-
-```sh
-docker compose up
-```
 
 ### Running Bare Metal
 
