@@ -1,0 +1,21 @@
+{
+    "websiteInfo": {
+        "name": "My Website",
+        "url": "https://mywebsite.com",
+        "createdAt": "2023-06-15T12:34:56Z",
+        "owner": "John Doe"
+    },
+    "vmConfig": {
+        "cpu": 4,
+        "ram": 16,
+        "disk": 200,
+        "os": "Ubuntu 20.04",
+        "instanceId": "i-0b55b125c110f0071",
+        "publicIPv4": "3.83.86.132",
+        "instanceState": "Running",
+        "privateIPv4": "172.31.81.21",
+        "publicDns": "ec2-3-83-86-132.compute-1.amazonaws.com",
+        "instanceType": "t2.micro",
+        "vpcId": "vpc-0c4c20a6cd792a18d"
+    }
+}
