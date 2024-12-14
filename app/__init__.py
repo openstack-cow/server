@@ -3,6 +3,8 @@ from flask_login import LoginManager # type: ignore
 from flask_migrate import Migrate
 from .models import db
 from flask_cors import CORS
+from .websites import websites
+
 
 from app.env import (
     MYSQL_HOSTNAME, MYSQL_HOSTPORT,
@@ -25,7 +27,8 @@ def create_app():
     # from .api import api
     
     app.register_blueprint(auth,url_prefix='/')
-    
+    app.register_blueprint(websites,url_prefix='/websites')
+
     from .models import User
     
     # create_database(app) 
