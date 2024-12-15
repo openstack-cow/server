@@ -3,8 +3,31 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user
 from .models import User
 from . import db
+import jwt
+import datetime
+from functools import wraps
+
 
 auth = Blueprint('auth', __name__)
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')  # Lấy token từ header
+        if not token:
+            return jsonify({"error": "Token is missing!"}), 401
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = User.query.get(data['user_id'])
+            if not current_user:
+                return jsonify({"error": "Invalid token!"}), 401
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token has expired!"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token!"}), 401
+        return f(current_user, *args, **kwargs)
+    return decorated
+
 @auth.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()  # Get JSON data from the frontend
@@ -52,9 +75,22 @@ def login():
 
     if user:
         if check_password_hash(user.password, password):
-            login_user(user, remember=True)
-            return jsonify({"message": "Logged in successfully"}), 200
+            # Tạo JWT Token
+            token = jwt.encode(
+                {
+                    "user_id": user.id,
+                    "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)  
+                },
+                "secret_key",
+                algorithm="HS256"
+            )
+            return jsonify({"message": "Logged in successfully", "token": token}), 200
         else:
             return jsonify({"error": "Incorrect password, try again!"}), 401
     else:
         return jsonify({"error": "Email does not exist"}), 404
+
+@auth.route('/protected', methods=['GET'])
+@token_required
+def protected_route(current_user):
+    return jsonify({"message": f"Hello, {current_user.name}!"}), 200
