@@ -12,7 +12,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False) # the password hash, not plaintext
     name = db.Column(db.String(150), nullable=False)
-    websites = db.relationship('Website', backref=db.backref('user', lazy=True))
+    websites = db.relationship('Website')
 
 class Plan(db.Model):
     __tablename__ = 'plans'
@@ -26,7 +26,7 @@ class Plan(db.Model):
     has_mysql = db.Column(db.Boolean, nullable=False)
     monthly_fee_in_usd = db.Column(db.Float, nullable=False)
     image_reference = db.Column(db.String(255), unique=True, nullable=False)
-    websites = db.relationship('Website', backref=db.backref('plan', lazy=True))
+    websites = db.relationship('Website')
 
 class NovaVM(db.Model):
     __tablename__ = 'nova_vms'
@@ -34,13 +34,13 @@ class NovaVM(db.Model):
     status = db.Column(db.String(50), nullable=False)
     floating_ip = db.Column(db.String(100), nullable=True) # nullable until the VM is assigned a floating IP
     openstack_nova_vm_id = db.Column(db.String(255), unique=True, nullable=False)
-    websites = db.relationship('Website', backref=db.backref('nova_vm', lazy=True))
+    websites = db.relationship('Website')
 
 class CinderVolume(db.Model):
     __tablename__ = 'cinder_volumes'
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     openstack_cinder_volume_id = db.Column(db.String(255), unique=True, nullable=False)
-    websites = db.relationship('Website', backref=db.backref('cinder_volume', lazy=True))
+    websites = db.relationship('Website')
 
 class Website(db.Model):
     __tablename__ = 'websites'
@@ -59,7 +59,7 @@ class Website(db.Model):
     cinder_volume_id = db.Column(db.Integer, db.ForeignKey('cinder_volumes.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
     created_at = db.Column(db.BigInteger, nullable=False) # seconds since epoch
 
-    user = db.relationship('User', backref=db.backref('websites', lazy=True))
-    plan = db.relationship('Plan', backref=db.backref('websites', lazy=True))
-    nova_vm = db.relationship('NovaVM', backref=db.backref('websites', lazy=True))
-    cinder_volume = db.relationship('CinderVolume', backref=db.backref('websites', lazy=True))
+    user = db.relationship('User')
+    plan = db.relationship('Plan')
+    nova_vm = db.relationship('NovaVM')
+    cinder_volume = db.relationship('CinderVolume')
