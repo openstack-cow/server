@@ -9,13 +9,14 @@ from .websites import websites
 from app.env import (
     MYSQL_HOSTNAME, MYSQL_HOSTPORT,
     MYSQL_USERNAME, MYSQL_PASSWORD,
-    MYSQL_DATABASE,SECRET_KEY
+    MYSQL_DATABASE, SECRET_KEY,
 )
 
 def create_app():
     app = Flask(__name__)
     # Configuring CORS
-    CORS(app, origins=["http://localhost:5173"], supports_credentials=True, allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Access-Control-Allow-Methods", "Access-Control-Allow-Credentials"], methods=["GET", "POST", "PUT", "PATCH", "DELETE"]) # type: ignore
+    CORS(app)
+
     app.config["SECRET_KEY"] = SECRET_KEY
     app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql://{MYSQL_USERNAME}:{MYSQL_PASSWORD}@{MYSQL_HOSTNAME}:{MYSQL_HOSTPORT}/{MYSQL_DATABASE}"
     db.init_app(app)
