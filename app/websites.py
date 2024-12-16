@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, render_template
 import json
 
-
 websites = Blueprint('websites', __name__)
 
 @websites.route("/<string:id>", methods=["GET"])
