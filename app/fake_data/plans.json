@@ -1,0 +1,36 @@
+[
+    {
+      "type": "Node.js",
+      "name": "Node.js Basic",
+      "storage_in_gb": 0.3,
+      "ram_in_gb": 0.25,
+      "cpu_cores": 1,
+      "has_redis": false,
+      "has_mysql": false,
+      "monthly_fee_in_usd": 5.0,
+      "image_reference": "registry.example.com/nodejs-basic:1.0"
+    },
+    {
+      "type": "Node.js",
+      "name": "Node.js MySQL",
+      "storage_in_gb": 0.7,
+      "ram_in_gb": 0.5,
+      "cpu_cores": 2,
+      "has_redis": false,
+      "has_mysql": true,
+      "monthly_fee_in_usd": 10.0,
+      "image_reference": "registry.example.com/nodejs-mysql:1.0"
+    },
+    {
+      "type": "Node.js",
+      "name": "Node.js MySQL + Redis",
+      "storage_in_gb": 1.0,
+      "ram_in_gb": 0.6,
+      "cpu_cores": 2,
+      "has_redis": true,
+      "has_mysql": true,
+      "monthly_fee_in_usd": 15.0,
+      "image_reference": "registry.example.com/nodejs-mysql-redis:1.0"
+    }
+  ]
+      

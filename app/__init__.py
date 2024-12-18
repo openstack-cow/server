@@ -4,6 +4,7 @@ from flask_migrate import Migrate
 from .models import db
 from flask_cors import CORS
 from .websites import websites
+from .plans import plans
 
 
 from app.env import (
@@ -29,6 +30,7 @@ def create_app():
     
     app.register_blueprint(auth,url_prefix='/')
     app.register_blueprint(websites,url_prefix='/websites')
+    app.register_blueprint(plans,url_prefix='/plans')
 
     from .models import User
     
