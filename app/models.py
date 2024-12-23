@@ -47,7 +47,7 @@ class Website(db.Model):
     __table_args__ = (
         db.UniqueConstraint('nova_vm_port', 'nova_vm_id', name='unique_nova_vm_port_id'),
     )
-    
+
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
