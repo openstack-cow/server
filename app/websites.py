@@ -241,6 +241,8 @@ def create_website():
         print(f"Output: {stdout.read().decode()}")
         print(f"Error: {stderr.read().decode()}")
 
+
+        # check if instance already has the scripts
         command = f"test -f instance-scripts.zip && echo 'exist' || echo 'missing'"
         stdin, stdout, stderr = ssh_client.exec_command(command)
         output = stdout.read().decode().strip()
@@ -251,6 +253,17 @@ def create_website():
             print(f"Error: {stderr.read().decode()}")
 
             command = "unzip instance-scripts.zip"
+            stdin, stdout, stderr = ssh_client.exec_command(command)
+            print(f"Output: {stdout.read().decode()}")
+            print(f"Error: {stderr.read().decode()}")
+        
+
+         # check if Docker is installed
+        command = "docker --version"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        output = stdout.read().decode().strip()
+        if not output:
+            command = "source setup-instance.sh"
             stdin, stdout, stderr = ssh_client.exec_command(command)
             print(f"Output: {stdout.read().decode()}")
             print(f"Error: {stderr.read().decode()}")
