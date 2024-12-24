@@ -181,7 +181,6 @@ def create_website():
     print(data)
 
     # get nova VM info
-
     # save zipped code somewhere and get url
     hostname = "192.168.1.16"
     port = 22  # Default SSH port
@@ -211,15 +210,15 @@ def create_website():
         print(f"Output: {stdout.read().decode()}")
         print(f"Error: {stderr.read().decode()}")
 
-        # command = f"wget -O instance_scripts.zip {instance_scripts_url}"
-        # stdin, stdout, stderr = ssh_client.exec_command(command)
-        # print(f"Output: {stdout.read().decode()}")
-        # print(f"Error: {stderr.read().decode()}")
+        command = f"wget -O instance_scripts.zip {instance_scripts_url}"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print(f"Output: {stdout.read().decode()}")
+        print(f"Error: {stderr.read().decode()}")
 
-        # command = "unzip instance_scripts.zip"
-        # stdin, stdout, stderr = ssh_client.exec_command(command)
-        # print(f"Output: {stdout.read().decode()}")
-        # print(f"Error: {stderr.read().decode()}")
+        command = "unzip instance_scripts.zip"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print(f"Output: {stdout.read().decode()}")
+        print(f"Error: {stderr.read().decode()}")
 
         command = f"source setup-website-folder.sh '{website_id}' '{user_code_zip_url}' '{DOCKERFILE_URL}' '{DOCKER_COMPOSE_PLAN_3}'"
         stdin, stdout, stderr = ssh_client.exec_command(command)
