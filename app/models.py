@@ -19,13 +19,12 @@ class Plan(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     type = db.Column(db.String(150), nullable=False)
     name = db.Column(db.String(255), nullable=False)
-    storage_in_gb = db.Column(db.Float, nullable=False)
-    ram_in_gb = db.Column(db.Float, nullable=False)
+    storage_in_mb = db.Column(db.Integer, nullable=False)
+    ram_in_mb = db.Column(db.Integer, nullable=False)
     cpu_cores = db.Column(db.Integer, nullable=False)
     has_redis = db.Column(db.Boolean, nullable=False)
     has_mysql = db.Column(db.Boolean, nullable=False)
     monthly_fee_in_usd = db.Column(db.Float, nullable=False)
-    image_reference = db.Column(db.String(255), unique=True, nullable=False)
     websites = db.relationship('Website')
 
 class NovaVM(db.Model):
@@ -36,11 +35,6 @@ class NovaVM(db.Model):
     openstack_nova_vm_id = db.Column(db.String(255), unique=True, nullable=False)
     websites = db.relationship('Website')
 
-class CinderVolume(db.Model):
-    __tablename__ = 'cinder_volumes'
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    openstack_cinder_volume_id = db.Column(db.String(255), unique=True, nullable=False)
-    websites = db.relationship('Website')
 
 class Website(db.Model):
     __tablename__ = 'websites'
@@ -56,10 +50,8 @@ class Website(db.Model):
     public_port = db.Column(db.Integer, unique=True, nullable=False)
     nova_vm_port = db.Column(db.Integer, nullable=False)
     nova_vm_id = db.Column(db.Integer, db.ForeignKey('nova_vms.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
-    cinder_volume_id = db.Column(db.Integer, db.ForeignKey('cinder_volumes.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
     created_at = db.Column(db.BigInteger, nullable=False) # seconds since epoch
 
     user = db.relationship('User')
     plan = db.relationship('Plan')
     nova_vm = db.relationship('NovaVM')
-    cinder_volume = db.relationship('CinderVolume')

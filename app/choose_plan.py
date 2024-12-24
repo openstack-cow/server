@@ -1,4 +1,6 @@
 
+import time
+import random
 from flask import Blueprint, jsonify, request
 import os
 from sqlalchemy.exc import SQLAlchemyError
@@ -19,9 +21,9 @@ def get_total_resources_from_flavor():
             raise ValueError(f"Flavor with ID {NOVA_VM_FLAVOR_ID} not found.")
 
         return {
-            "cpu_cores": flavor.vcpus,
-            "ram_in_gb": flavor.ram / 1024.0,  # Convert MB to GB
-            "storage_in_gb": flavor.disk
+            "cpu_cores": 2*flavor.vcpus,
+            "ram_in_mb": flavor.ram,
+            "storage_in_mb": flavor.disk*1024  # Convert GB to MB
         }
 
     except Exception as e:
@@ -36,18 +38,23 @@ def calculate_nova_instance_stats(nova_vm_id):
 
         total_resources = get_total_resources_from_flavor()
 
+        print(total_resources)
+
         websites = nova_instance.websites  # Assume a relationship is defined
         used_resources = {
             "cpu_cores": sum(website.plan.cpu_cores for website in websites),
-            "ram_in_gb": sum(website.plan.ram_in_gb for website in websites),
-            "storage_in_gb": sum(website.plan.storage_in_gb for website in websites)
+            "ram_in_mb": sum(website.plan.ram_in_mb for website in websites),
+            "storage_in_mb": sum(website.plan.storage_in_mb for website in websites)
         }
+
+        print(used_resources)
 
         remaining_resources = {
             "cpu_cores": total_resources["cpu_cores"] - used_resources["cpu_cores"],
-            "ram_in_gb": total_resources["ram_in_gb"] - used_resources["ram_in_gb"],
-            "storage_in_gb": total_resources["storage_in_gb"] - used_resources["storage_in_gb"]
+            "ram_in_mb": total_resources["ram_in_mb"] - used_resources["ram_in_mb"],
+            "storage_in_mb": total_resources["storage_in_mb"] - used_resources["storage_in_mb"]
         }
+        print(remaining_resources)
 
         return {
             "nova_instance": nova_instance,
@@ -70,17 +77,17 @@ def select_or_create_nova_instance(plan_id):
         stats = calculate_nova_instance_stats(nova_instance.id)
         if stats and all(
             stats["remaining_resources"][key] >= getattr(plan, key)
-            for key in ["cpu_cores", "ram_in_gb", "storage_in_gb"]
+            for key in ["cpu_cores", "ram_in_mb", "storage_in_mb"]
         ):
             return nova_instance
-    print ("Creating new nova instance")
+
     return create_new_nova_instance()
 
 def create_new_nova_instance():
     conn = get_openstack_connection()
 
     instance = conn.compute.create_server(
-        name="new-nova-instance",
+        name="new-nova-instance"+str(random.randint(1,100))+str(time.time()),
         flavorRef=NOVA_VM_FLAVOR_ID,
         imageRef=NOVA_VM_IMAGE_ID,
         networks=[{"uuid": NOVA_VM_NETWORK_ID}],
@@ -109,6 +116,55 @@ def create_new_nova_instance():
 
     return nova_instance
 
+def delete_nova_instance(nova_instance_id):
+    """Delete a Nova Instance, Floating IP, and associated port."""
+    try:
+        conn = get_openstack_connection()
+
+        # Get Nova Instance from database
+        nova_instance = NovaVM.query.filter_by(openstack_nova_vm_id=nova_instance_id).first()
+        if not nova_instance:
+            raise ValueError(f"Nova Instance with ID {nova_instance_id} not found in database.")
+
+        # Delete from database
+        db.session.delete(nova_instance)
+        db.session.commit()
+       
+        ports = list(conn.network.ports(device_id=nova_instance.openstack_nova_vm_id))
+
+        for floating_ip in conn.network.ips():
+            if floating_ip.port_id:
+                # Check if the floating IP is associated with the server's port
+                port = conn.network.get_port(floating_ip.port_id)
+                if port and port.device_id == nova_instance.openstack_nova_vm_id:
+                    # Delete the floating IP
+                    try:
+                        conn.network.delete_ip(floating_ip)
+                        print(f"Deleted Floating IP {floating_ip.floating_ip_address}")
+                    except Exception as e:
+                        print(f"Failed to delete Floating IP {floating_ip.floating_ip_address}: {str(e)}")
+ 
+
+        # Delete instance on OpenStack
+        conn.compute.delete_server(nova_instance.openstack_nova_vm_id, ignore_missing=True)
+        try:
+            conn.compute.wait_for_delete(nova_instance.openstack_nova_vm_id)
+        except Exception as e:
+            print(f"Failed to wait for delete: {str(e)}")
+
+        # Delete associated ports
+        for port in ports:
+            try:
+                conn.network.delete_port(port.id, ignore_missing=True)
+            except Exception as e:
+                print(f"Failed to delete port {port.id}: {str(e)}")
+
+
+        return {"message": f"Nova Instance {nova_instance_id}, its Floating IP, and associated ports deleted successfully."}
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to delete Nova Instance: {str(e)}")
+
 
 @choose_plan.route('/nova-instance', methods=['POST'])
 def api_select_or_create_nova_instance():
@@ -127,3 +183,15 @@ def api_select_or_create_nova_instance():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@choose_plan.route('/nova-instance/delete', methods=['DELETE'])
+def api_delete_nova_instance():
+    try:
+        data = request.get_json()
+        nova_instance_id = data.get('nova_instance_id')
+        if not nova_instance_id:
+            return jsonify({"error": "nova_instance_id is required"}), 400
+
+        result = delete_nova_instance(nova_instance_id)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
