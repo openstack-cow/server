@@ -120,7 +120,7 @@ def get_website_detail(id):
 
     plan = {
         "id": plan_data.id,
-        "storage_in_gb": plan_data.storage_in_gb,
+        "storage_in_mb": plan_data.storage_in_mb,
         "name": plan_data.name,
         "price": plan_data.price
     } if plan_data else None
