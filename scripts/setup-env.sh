@@ -4,9 +4,9 @@
 usage() {
   echo "Usage: $0 <path_to_env_directory> <use_case> <APP_PORT> <WEBSITE_ID>"
   echo "Use cases:"
-  echo "  nodejs          - Only update APP_PORT and WEBSITE_ID"
-  echo "  nodejs_mysql    - Update APP_PORT, WEBSITE_ID, MYSQL_HOST, and _MYSQL_HOST_PORT"
-  echo "  nodejs_mysql_redis - Update all variables (APP_PORT, WEBSITE_ID, MYSQL_HOST, _MYSQL_HOST_PORT, REDIS_HOST, _REDIS_HOST_PORT)"
+  echo "  nodejs          - Only update APP_PORT, WEBSITE_ID, and PORT"
+  echo "  nodejs_mysql    - Update APP_PORT, WEBSITE_ID, PORT, MYSQL_HOST, and _MYSQL_HOST_PORT"
+  echo "  nodejs_mysql_redis - Update all variables (APP_PORT, WEBSITE_ID, PORT, MYSQL_HOST, _MYSQL_HOST_PORT, REDIS_HOST, _REDIS_HOST_PORT)"
   exit 1
 }
 
@@ -25,6 +25,7 @@ ENV_FILE="$ENV_DIR/.env"
 # Derive ports from system environment variables or default values
 MYSQL_HOST_PORT=${MYSQL_HOST_PORT:-3307}
 REDIS_HOST_PORT=${REDIS_HOST_PORT:-6380}
+PORT=3000  # Default container port for the application
 
 # Check if the .env file exists
 if [ ! -f "$ENV_FILE" ]; then
@@ -55,26 +56,29 @@ add_variables() {
 case $USE_CASE in
   nodejs)
     echo "Updating for Node.js only..."
-    remove_keys APP_PORT WEBSITE_ID
-    add_variables \
-      "APP_PORT=$APP_PORT" \
-      "WEBSITE_ID=$WEBSITE_ID"
-    ;;
-  nodejs_mysql)
-    echo "Updating for Node.js with MySQL..."
-    remove_keys APP_PORT WEBSITE_ID MYSQL_HOST _MYSQL_HOST_PORT
+    remove_keys APP_PORT WEBSITE_ID PORT
     add_variables \
       "APP_PORT=$APP_PORT" \
       "WEBSITE_ID=$WEBSITE_ID" \
+      "PORT=$PORT"
+    ;;
+  nodejs_mysql)
+    echo "Updating for Node.js with MySQL..."
+    remove_keys APP_PORT WEBSITE_ID PORT MYSQL_HOST _MYSQL_HOST_PORT
+    add_variables \
+      "APP_PORT=$APP_PORT" \
+      "WEBSITE_ID=$WEBSITE_ID" \
+      "PORT=$PORT" \
       "MYSQL_HOST=mysql" \
       "_MYSQL_HOST_PORT=$MYSQL_HOST_PORT"
     ;;
   nodejs_mysql_redis)
     echo "Updating for Node.js with MySQL and Redis..."
-    remove_keys APP_PORT WEBSITE_ID MYSQL_HOST _MYSQL_HOST_PORT REDIS_HOST _REDIS_HOST_PORT
+    remove_keys APP_PORT WEBSITE_ID PORT MYSQL_HOST _MYSQL_HOST_PORT REDIS_HOST _REDIS_HOST_PORT
     add_variables \
       "APP_PORT=$APP_PORT" \
       "WEBSITE_ID=$WEBSITE_ID" \
+      "PORT=$PORT" \
       "MYSQL_HOST=mysql" \
       "_MYSQL_HOST_PORT=$MYSQL_HOST_PORT" \
       "REDIS_HOST=redis" \

@@ -1,15 +1,8 @@
 #!/bin/bash
 
-# Check and add nameserver 8.8.8.8 if not present
-grep -q "^nameserver 8.8.8.8$" /etc/resolv.conf || echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
 
-# Check and add nameserver 8.8.4.4 if not present
-grep -q "^nameserver 8.8.4.4$" /etc/resolv.conf || echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf > /dev/null
-
-# Check and add hostname entry if not present
-if ! grep -q "127.0.1.1[[:space:]]\+$1" /etc/hosts; then
-    echo "127.0.1.1    $1" | sudo tee -a /etc/hosts > /dev/null
-fi
+PRIMARY_INTERFACE=$(ip route | awk '/default/ {print $5; exit}')
+sudo resolvectl dns ${PRIMARY_INTERFACE} 8.8.8.8
 
 sudo apt update
 sudo apt install -y ca-certificates curl gnupg unzip zip htop nano
