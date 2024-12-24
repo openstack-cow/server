@@ -8,9 +8,7 @@ from .plans import plans
 
 
 from app.env import (
-    MYSQL_HOSTNAME, MYSQL_HOSTPORT,
-    MYSQL_USERNAME, MYSQL_PASSWORD,
-    MYSQL_DATABASE, SECRET_KEY,
+    POSTGRES_URL, SECRET_KEY,
 )
 
 def create_app():
@@ -19,7 +17,7 @@ def create_app():
     CORS(app)
 
     app.config["SECRET_KEY"] = SECRET_KEY
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql://{MYSQL_USERNAME}:{MYSQL_PASSWORD}@{MYSQL_HOSTNAME}:{MYSQL_HOSTPORT}/{MYSQL_DATABASE}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = POSTGRES_URL
     db.init_app(app)
     
     migrate = Migrate(app, db) # type: ignore
