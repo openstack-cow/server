@@ -4,6 +4,7 @@ load_dotenv()
 import os
 from urllib.parse import quote
 
+# print(os.environ)
 def readNonEmptyStringEnv(key: str) -> str:
     value = os.environ.get(key, None)
     if value is None or len(value) == 0:
@@ -36,6 +37,7 @@ MYSQL_DATABASE = readNonEmptyStringEnv("MYSQL_DATABASE")
 NOVA_VM_FLAVOR_ID=readNonEmptyStringEnv("NOVA_VM_FLAVOR_ID")
 NOVA_VM_IMAGE_ID=readNonEmptyStringEnv("NOVA_VM_IMAGE_ID")
 NOVA_VM_NETWORK_ID=readNonEmptyStringEnv("NOVA_VM_NETWORK_ID")
+NOVA_VM_EXTERNAL_NETWORK_ID=readNonEmptyStringEnv("NOVA_VM_EXTERNAL_NETWORK_ID")
 NOVA_VM_SECURITY_GROUP_ID=readNonEmptyStringEnv("NOVA_VM_SECURITY_GROUP_ID")
 NOVA_VM_KEYPAIR_NAME=readNonEmptyStringEnv("NOVA_VM_KEYPAIR_NAME")
 NOVA_VM_PRIVATE_KEY_PATH=readNonEmptyStringEnv("NOVA_VM_PRIVATE_KEY_PATH")

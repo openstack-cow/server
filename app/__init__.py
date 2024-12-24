@@ -1,6 +1,8 @@
 from flask import Flask
 from flask_login import LoginManager # type: ignore
 from flask_migrate import Migrate
+
+from .choose_plan import choose_plan
 from .models import db
 from flask_cors import CORS
 from .websites import websites
@@ -32,6 +34,7 @@ def create_app():
     app.register_blueprint(auth,url_prefix='/')
     app.register_blueprint(websites,url_prefix='/websites')
     app.register_blueprint(plans,url_prefix='/plans')
+    app.register_blueprint(choose_plan,url_prefix='/choose_plan')
 
     app.register_blueprint(openstack_service,url_prefix='/openstack_service')
     from .models import User
