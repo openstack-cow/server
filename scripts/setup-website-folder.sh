@@ -6,8 +6,6 @@
 
 mkdir $1 # create a folder by website_id
 
-cd $1
-
 # Supabase
 
 wget -O ./$1/website_code.zip $2 # download the website code

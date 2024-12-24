@@ -2,4 +2,4 @@
 
 cd $1
 
-docker-compose down
+sudo docker compose down
