@@ -170,3 +170,7 @@ database.db
 
 # Ignore Python cache files
 __pycache__/
+
+
+ssh-key
+temp/

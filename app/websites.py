@@ -6,6 +6,8 @@ from .utils.token_required import token_required
 from .utils.openstack_api import get_openstack_connection
 from . import db
 from .env import NOVA_VM_PRIVATE_KEY_PATH
+import paramiko
+from .env import DOCKERFILE_URL, DOCKER_COMPOSE_PLAN_1, DOCKER_COMPOSE_PLAN_2, DOCKER_COMPOSE_PLAN_3
 websites = Blueprint('websites', __name__)
 conn = get_openstack_connection()
 
@@ -71,7 +73,7 @@ def update_website_status(id):
     try:
         data = request.get_json()
         action = data.get("action")
-        action_shell= f"docker {action} web_{id}"
+        action_shell= f"docker {action} nodejs-app-{id}"
         valid_actions = {"start", "stop", "restart"}
         if action not in valid_actions:
             return jsonify({"error": f"Invalid action. Valid actions are: {', '.join(valid_actions)}"}), 400
@@ -171,3 +173,110 @@ def nova_vm_shell(action, website_id):
     finally:
         ssh_client.close()
         print("Connection closed")
+
+
+def create_ssh_client(website_id):
+    # nova_floating_ip = Website.join(NovaVM, Website.nova_vm_id == NovaVM.id).filter(Website.id == website_id).first().floating_ip
+    
+    # remove this hardcode value
+    nova_floating_ip = "172.16.2.221"
+    nova_name = "ubuntu"
+    port = 22
+    private_key_path = NOVA_VM_PRIVATE_KEY_PATH  
+
+    try:
+        private_key = paramiko.Ed25519Key.from_private_key_file(private_key_path)
+
+        # Create an SSH client
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(
+            paramiko.AutoAddPolicy())  
+
+        ssh_client.connect(nova_floating_ip, port, username=nova_name, pkey=private_key)
+        print("Connected to the server")
+
+        return ssh_client
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+@websites.route("/create", methods=["POST"])
+def create_website():
+    try:
+        data = request.get_json()
+        print(data)
+
+        website_name = data.get("name")
+        plan_id = data.get("plan_id")
+        user_id = data.get("user_id")
+        user_code_zip_url = data.get("user_code_zip_url")
+        nova_vm_port = data.get("app_port")
+
+        if plan_id == 1:
+            DOCKER_COMPOSE_PLAN_URL = DOCKER_COMPOSE_PLAN_1
+            USE_CASE = "nodejs"
+        elif plan_id == 2:
+            DOCKER_COMPOSE_PLAN_URL = DOCKER_COMPOSE_PLAN_2
+            USE_CASE = "nodejs_mysql"
+        elif plan_id == 3:
+            DOCKER_COMPOSE_PLAN_URL = DOCKER_COMPOSE_PLAN_3
+            USE_CASE = "nodejs_mysql_redis"
+        else:
+            return jsonify({"error": "Invalid plan ID"}), 400
+
+        # scripts to setup
+        instance_scripts_url = "https://rqrfqewauxwlizbxuekr.supabase.co/storage/v1/object/public/openstack_code/instance-scripts.zip"
+
+        # remove this hardcode value
+        website_id = "abc123"
+        
+        ssh_client = create_ssh_client(website_id)
+        if not ssh_client:
+            return jsonify({"error": "Failed to connect to Nova instance"}), 500
+        
+
+        # Execute a command on the remote server
+        command = "ls -l"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print(f"Output: {stdout.read().decode()}")
+        print(f"Error: {stderr.read().decode()}")
+
+        command = f"test -f instance-scripts.zip && echo 'exist' || echo 'missing'"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        output = stdout.read().decode().strip()
+        if output == "missing":
+            command = f"wget -O instance-scripts.zip {instance_scripts_url}"
+            stdin, stdout, stderr = ssh_client.exec_command(command)
+            print(f"Output: {stdout.read().decode()}")
+            print(f"Error: {stderr.read().decode()}")
+
+            command = "unzip instance-scripts.zip"
+            stdin, stdout, stderr = ssh_client.exec_command(command)
+            print(f"Output: {stdout.read().decode()}")
+            print(f"Error: {stderr.read().decode()}")
+        
+
+        command = f"source setup-website-folder.sh '{website_id}' '{user_code_zip_url}' '{DOCKERFILE_URL}' '{DOCKER_COMPOSE_PLAN_URL}'"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print(f"Output: {stdout.read().decode()}")
+        print(f"Error: {stderr.read().decode()}")
+
+        command = f"source setup-env.sh './{website_id}' '{USE_CASE}' '{nova_vm_port}' '{website_id}'"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print(f"Output: {stdout.read().decode()}")
+        print(f"Error: {stderr.read().decode()}")
+
+        command = f"source run-website.sh '{website_id}'"
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print(f"Output: {stdout.read().decode()}")
+        print(f"Error: {stderr.read().decode()}")
+
+        # Retrieve command output
+
+    except paramiko.SSHException as e:
+        print(f"SSH connection error: {e}")
+    finally:
+        ssh_client.close()
+        print("Connection closed")
+
+    return jsonify({"status": "success", "data": "Nothing"}), 200

@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: nodejs-app-${WEBSITE_ID}
+    ports:
+      - "${APP_PORT}:3000"
+    env_file:
+      - .env
+    restart: always
+    networks:
+    - app-network
+
+networks:
+  app-network:
+    driver: bridge
