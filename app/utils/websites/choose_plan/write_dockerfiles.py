@@ -31,11 +31,12 @@ def write_docker_files(ssh_client: paramiko.SSHClient, plan_name: str, dir_path:
         f"echo \"\" > {docker_compose_path}",
         f"echo \"\" > {dockerfile_path}",
     ]
+    from shlex import quote
     commands.extend([
-        f"echo \"{line}\" | tee -a {dockerfile_path}" for line in docker_file_content_by_lines
+        f"echo {quote(line)} | tee -a {dockerfile_path}" for line in docker_file_content_by_lines
     ])
     commands.extend([
-        f"echo \"{line}\" | tee -a {docker_compose_path}" for line in docker_compose_content_by_lines
+        f"echo {quote(line)} | tee -a {docker_compose_path}" for line in docker_compose_content_by_lines
     ])
 
     for command in commands:
@@ -53,8 +54,6 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, exposed_
     Returns a tuple of two lists: Dockerfile content and docker-compose.yml content.
     The content is split by lines.
     """
-    from shlex import quote
-
     docker_compose_content_by_lines: list[str]
     if plan_name == "Node.js":
         docker_compose_content_by_lines = [
@@ -173,6 +172,7 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, exposed_
     else:
         raise ValueError(f"Unsupported plan_name: {plan_name}")
     
+    import json
     start_script_in_list: list[str] = start_script.split()
     docker_file_content_by_lines: list[str] = [
         f"FROM node:22",
@@ -180,7 +180,7 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, exposed_
         f"COPY . .",
         f"RUN {build_script}", # possible security issue here
         f"EXPOSE {app_port}",
-        f"CMD [{', '.join(quote(arg) for arg in start_script_in_list)}]",
+        f"CMD {json.dumps(start_script_in_list)}",
     ]
 
     return docker_file_content_by_lines, docker_compose_content_by_lines

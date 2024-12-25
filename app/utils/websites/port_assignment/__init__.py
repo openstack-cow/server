@@ -23,4 +23,4 @@ def _find_available_public_port() -> int:
 def _iptables_forward(enable: bool, public_port: int, internal_ip_address: str, internal_port: int) -> None:
     from app.utils.shell import execute_shell_command
     execute_shell_command(f"sudo iptables -t nat -{'A' if enable else 'D'} PREROUTING -p tcp --dport {public_port} -j DNAT --to-destination {internal_ip_address}:{internal_port}")
-    execute_shell_command(f"sudo iptables -{'A' if enable else 'D'} FORWARD -p tcp -d {internal_ip_address} --dport {internal_port} -j ACCEPT")
+    # execute_shell_command(f"sudo iptables -{'A' if enable else 'D'} FORWARD -p tcp -d {internal_ip_address} --dport {internal_port} -j ACCEPT")
