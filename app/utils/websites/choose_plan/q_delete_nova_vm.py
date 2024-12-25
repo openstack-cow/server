@@ -40,5 +40,4 @@ def q_delete_nova_vm(nova_vm_entry_id: int) -> None:
                 print(f"Failed to delete port {port.id}: {str(e)}") # type: ignore
 
         # Delete from database
-        nova_vm_entry.status = "DELETED"
-        db.session.commit()
+        db.session.delete(nova_vm_entry)

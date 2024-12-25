@@ -69,17 +69,12 @@ def q_create_new_website(website_id: int) -> None:
                 website.message = "Waiting for Node.js container to be ready"
                 db.session.commit()
 
-                import time
-                timeout = 300 # if the website isn't live and healthy after 5 minutes, deem it failed
-                start_time = time.time()
-                while True:
-                    out, _err = execute_command(ssh_client, f"sudo docker inspect --format='{{{{.State.Health.Status}}}}' nodejs-app-{website.id}")
-                    if "healthy" in out:
-                        break
-                    if time.time() - start_time > timeout:
-                        raise TimeoutError("Node.js website failed to start in time")
-                    time.sleep(5)
-                
+                # Health check
+                from app.utils.websites.q_check_website_health import check_website_health
+                h = check_website_health(website.id, timeout_in_seconds = 300)
+                if h == "Unhealthy":
+                    raise TimeoutError("Node.js website failed to start in time")
+
                 website.status = "CREATING"
                 website.message = "Assigning public address"
                 db.session.commit()

@@ -36,9 +36,6 @@ class NovaVM(db.Model):
 
 class Website(db.Model):
     __tablename__ = 'websites'
-    __table_args__ = (
-        db.UniqueConstraint('nova_vm_port', 'nova_vm_id', name='unique_nova_vm_port_id'),
-    )
 
     id: int = db.Column(db.Integer, primary_key=True, nullable=False)
     name: str = db.Column(db.String(255), nullable=False)
@@ -46,7 +43,7 @@ class Website(db.Model):
     plan_id: int = db.Column(db.Integer, db.ForeignKey('plans.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
     status: str = db.Column(db.String(50), nullable=False)
     message: str = db.Column(LONGTEXT, nullable=True)
-    public_port: int = db.Column(db.Integer, unique=True, nullable=False)
+    public_port: int = db.Column(db.Integer, nullable=False)
     nova_vm_port: int = db.Column(db.Integer, nullable=False)
     nova_vm_id: int = db.Column(db.Integer, db.ForeignKey('nova_vms.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
 
