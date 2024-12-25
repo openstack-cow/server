@@ -92,8 +92,8 @@ def q_create_new_website(website_id: int) -> None:
                 db.session.commit()
 
                 # Retrieve the dynamically-assigned internal port
-                out, _err = execute_command(ssh_client, f"sudo docker compose -p website_{website.id} port app {website.port}")
-                nova_vm_port = int(out.split(":")[1].strip())
+                out, _err = execute_command(ssh_client, f"sudo docker port nodejs-app-{website.id} | head -n 1 | awk '{{print $3}}' | cut -d':' -f2")
+                nova_vm_port = int(out)
                 website.nova_vm_port = nova_vm_port
                 db.session.commit()
 

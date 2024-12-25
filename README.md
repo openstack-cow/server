@@ -87,30 +87,13 @@ flask db upgrade
 
 #### Bare Metal: Launch the App
 
-Activate the venv if necessary. Then, at the project
-root, execute
+Install pm2. Then, at the project root, run:
 
 ```sh
-flask run --port=8000
+pm2 start ecosystem.config.js
 ```
 
-It should be available at <http://localhost:8000>.
-
-Alternatively, to enable hot-reloading (automatically
-reload the app when file changes are detected), run
-the following command (still after activating venv
-and at the project root):
-
-```sh
-python debug.py
-```
-
-It should also be available at <http://localhost:8000>.
-You can specify a different port:
-
-```sh
-python debug.py 3000
-```
+It should be available at <http://localhost:5002>.
 
 ## Advanced Use
 

@@ -1,15 +1,28 @@
 import paramiko
 
-def write_docker_files(ssh_client: paramiko.SSHClient, plan_name: str, dir_path: str, website_id: int, app_port: int, build_script: str, start_script: str) -> None:
+def write_docker_files(ssh_client: paramiko.SSHClient, plan_name: str, dir_path: str, website_id: int, app_port: int, build_script: str, start_script: str) -> int:
     """Writes Dockerfile and docker-compose.yml files to the website directory indicated by ``dir_path``.
     plan_name is as saved in database ; currently supported values are:
     - "Node.js"
     - "Node.js + MySQL"
     - "Node.js + MySQL + Redis"
+    Return the exposed port of Node.js.
     """
-    docker_file_content_by_lines, docker_compose_content_by_lines = render_docker_files(plan_name, website_id, app_port, build_script, start_script)
     import os
+    from app.utils.ssh import execute_command, CommandExecutionError
+    import random
 
+    # Choose an empty port
+    while True:
+        port = random.randint(1024, 65535)
+        try:
+            execute_command(ssh_client, f"ss -tuln | grep -q \":{port} \"")
+        except CommandExecutionError as e:
+            if len(e.out.strip()) == 0 and len(e.err.strip()) == 0 and e.return_code == 1:
+                break
+            raise
+
+    docker_file_content_by_lines, docker_compose_content_by_lines = render_docker_files(plan_name, website_id, app_port, port, build_script, start_script)
     dir_path = f"~/{website_id}/"
     docker_compose_path = os.path.join(dir_path, 'docker-compose.yml')
     dockerfile_path = os.path.join(dir_path, 'Dockerfile')
@@ -25,12 +38,12 @@ def write_docker_files(ssh_client: paramiko.SSHClient, plan_name: str, dir_path:
         f"echo \"{line}\" | tee -a {docker_compose_path}" for line in docker_compose_content_by_lines
     ])
 
-    from app.utils.ssh import execute_command
     for command in commands:
         execute_command(ssh_client, command)
 
+    return port
 
-def render_docker_files(plan_name: str, website_id: int, app_port: int, build_script: str, start_script: str) -> tuple[list[str], list[str]]:
+def render_docker_files(plan_name: str, website_id: int, app_port: int, exposed_port: int, build_script: str, start_script: str) -> tuple[list[str], list[str]]:
     """Renders Dockerfile and docker-compose.yml files.
     plan_name is as saved in database ; currently supported values are:
     - "Node.js"
@@ -47,10 +60,11 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, build_sc
         docker_compose_content_by_lines = [
             f"services:",
             f"  app:",
+            f"    image: node:22",
             f"    build: .",
             f"    container_name: nodejs-app-{website_id}",
             f"    ports:",
-            f"      - \"{app_port}\"", # let Docker assigns the exposed port
+            f"      - \"{exposed_port}:{app_port}\"",
             f"    restart: always",
             f"    healthcheck:",
             f"      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:{app_port}\"]",
@@ -66,10 +80,11 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, build_sc
         docker_compose_content_by_lines = [
             f"services:",
             f"  app:",
+            f"    image: node:22",
             f"    build: .",
             f"    container_name: nodejs-app-{website_id}",
             f"    ports:",
-            f"      - \"{app_port}\"", # let Docker assigns the exposed port
+            f"      - \"{exposed_port}:{app_port}\"",
             f"    restart: always",
             f"    healthcheck:",
             f"      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:{app_port}\"]",
@@ -106,10 +121,11 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, build_sc
         docker_compose_content_by_lines = [
             f"services:",
             f"  app:",
+            f"    image: node:22",
             f"    build: .",
             f"    container_name: nodejs-app-{website_id}",
             f"    ports:",
-            f"      - \"{app_port}\"", # let Docker assigns the exposed port
+            f"      - \"{exposed_port}:{app_port}\"",
             f"    restart: always",
             f"    healthcheck:",
             f"      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:{app_port}\"]",
@@ -159,10 +175,10 @@ def render_docker_files(plan_name: str, website_id: int, app_port: int, build_sc
     
     start_script_in_list: list[str] = start_script.split()
     docker_file_content_by_lines: list[str] = [
-        f"FROM node:22-alpine",
+        f"FROM node:22",
         f"WORKDIR /app",
         f"COPY . .",
-        f"RUN {quote(build_script)}",
+        f"RUN {build_script}", # possible security issue here
         f"EXPOSE {app_port}",
         f"CMD [{', '.join(quote(arg) for arg in start_script_in_list)}]",
     ]
