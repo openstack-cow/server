@@ -31,7 +31,7 @@ class NovaVM(db.Model):
     id: int = db.Column(db.Integer, primary_key=True, nullable=False)
     status: str = db.Column(db.String(50), nullable=False)
     floating_ip: str = db.Column(db.String(100), nullable=True) # nullable until the VM is assigned a floating IP
-    openstack_nova_vm_id: str = db.Column(db.String(255), unique=True, nullable=False)
+    openstack_nova_vm_id: str = db.Column(db.String(255), nullable=False)
     websites = db.relationship('Website')
 
 class Website(db.Model):

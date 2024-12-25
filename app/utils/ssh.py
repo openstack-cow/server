@@ -1,15 +1,13 @@
 from app.env import NOVA_VM_PRIVATE_KEY_PATH
 import paramiko
+import os
 
 def create_ssh_client_to_nova_vm(floating_ip: str):
     ssh_client = paramiko.SSHClient()
-    private_key = paramiko.Ed25519Key.from_private_key_file(NOVA_VM_PRIVATE_KEY_PATH)
-
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
+    private_key = paramiko.Ed25519Key.from_private_key_file(os.path.expanduser(NOVA_VM_PRIVATE_KEY_PATH))
     ssh_client.connect(floating_ip, port=22, username="ubuntu", pkey=private_key, timeout=120)
     print(f"Connected to the server at {floating_ip}")
-
     return ssh_client
 
 class CommandExecutionError(Exception):

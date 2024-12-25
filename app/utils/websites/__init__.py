@@ -6,7 +6,8 @@ from app.utils.websites.q_update_website_status import WebsiteUpdateAction
 def create_new_website(
     name: str, plan_id: int, user_id: int,
     build_script: str, start_script: str,
-    user_code_zip_url: str
+    user_code_zip_url: str,
+    port: int
 ) -> Website:
     # Get plan from db
     plan = Plan.query.get(plan_id)
@@ -25,7 +26,7 @@ def create_new_website(
         public_port=0, # type: ignore
         nova_vm_port=0, # type: ignore
         nova_vm_id=nova_vm_entry.id, # type: ignore
-        port=0, # type: ignore
+        port=port, # type: ignore
         build_script=build_script, # type: ignore
         start_script=start_script, # type: ignore
         code_zip_url=user_code_zip_url, # type: ignore

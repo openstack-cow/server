@@ -46,6 +46,7 @@ def signup():
 
 @auth.route('/login', methods=['POST'])
 def login():
+    from app.env import SECRET_KEY
     data = request.get_json()  # Get JSON data from the frontend
     email = str(data.get('email'))
     password = str(data.get('password'))
@@ -58,9 +59,8 @@ def login():
             token = jwt.encode(
                 {
                     "user_id": user.id,
-                    "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)  
                 },
-                "secret_key",
+                SECRET_KEY,
                 algorithm="HS256"
             )
             return jsonify({"message": "Logged in successfully", "token": token}), 200

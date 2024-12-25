@@ -18,8 +18,7 @@ from app.env import (
 
 def create_app():
     app = Flask(__name__)
-    # Configuring CORS
-    CORS(app)
+    CORS(app, allow_headers=["Content-Type", "Authorization"])
 
     app.config["SECRET_KEY"] = SECRET_KEY
     app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql://{MYSQL_USERNAME}:{MYSQL_PASSWORD}@{MYSQL_HOSTNAME}:{MYSQL_HOSTPORT}/{MYSQL_DATABASE}"
