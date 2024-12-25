@@ -24,7 +24,6 @@ class Plan(db.Model):
     has_redis: bool = db.Column(db.Boolean, nullable=False)
     has_mysql: bool = db.Column(db.Boolean, nullable=False)
     monthly_fee_in_usd: float = db.Column(db.Float, nullable=False)
-    docker_compose_plan_url: str = db.Column(LONGTEXT, nullable=False)
     websites = db.relationship('Website')
 
 class NovaVM(db.Model):
@@ -46,9 +45,16 @@ class Website(db.Model):
     user_id: int = db.Column(db.Integer, db.ForeignKey('users.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
     plan_id: int = db.Column(db.Integer, db.ForeignKey('plans.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
     status: str = db.Column(db.String(50), nullable=False)
+    message: str = db.Column(LONGTEXT, nullable=True)
     public_port: int = db.Column(db.Integer, unique=True, nullable=False)
     nova_vm_port: int = db.Column(db.Integer, nullable=False)
     nova_vm_id: int = db.Column(db.Integer, db.ForeignKey('nova_vms.id', onupdate="RESTRICT", ondelete="RESTRICT"), nullable=False)
+
+    port: int = db.Column(db.Integer, nullable=False)
+    build_script: str = db.Column(LONGTEXT, nullable=False)
+    start_script: str = db.Column(LONGTEXT, nullable=False)
+    code_zip_url: str = db.Column(LONGTEXT, nullable=False)
+
     created_at: int = db.Column(db.BigInteger, nullable=False) # seconds since epoch
 
     user = db.relationship('User')

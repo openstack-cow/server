@@ -1,90 +1,44 @@
 from typing import Literal
-from ...models import Website, NovaVM, Plan
-from app.utils.ssh import create_ssh_client_to_nova_vm, quick_shell_to_nova_vm
+from ...models import Website, NovaVM, Plan, db
+from app.utils.ssh import create_ssh_client_to_nova_vm, quick_shell_to_nova_vm, execute_command
 from app.utils.openstack_api import get_openstack_connection
-import time
+from datetime import datetime
+from app.utils.job_queue import get_job_queue
 
 WebsiteUpdateAction = Literal['start', 'stop', 'restart']
 
 def create_new_website_in_docker(
     name: str, plan_id: int, user_id: int,
     user_code_zip_url: str, nova_vm_port: int,
-):
+) -> Website:
     # Get plan from db
     plan = Plan.query.get(plan_id)
     if not plan:
         raise ValueError(f"No plan found with id {plan_id}")
     
-    from .choose_plan import select_or_create_nova_instance
+    from .choose_plan import select_or_create_nova_vm
+    nova_vm_entry = select_or_create_nova_vm(plan_id)
 
-    nova_vm_entry = select_or_create_nova_instance(plan_id)
+    website = Website(
+        name=name, # type: ignore
+        user_id=user_id, # type: ignore
+        plan_id=plan_id, # type: ignore
+        status="CREATING", # type: ignore
+        public_port=0, # type: ignore
+        nova_vm_port=0, # type: ignore
+        nova_vm_id=nova_vm_entry.id, # type: ignore
+        created_at=int(datetime.now().timestamp()), # type: ignore
+    )
+    db.session.add(website)
+    db.session.commit()
 
-    nova_floating_ip = nova_vm_entry.floating_ip
-    openstack_nova_vm_id = nova_vm_entry.openstack_nova_vm_id
+    from .q_create_new_website import q_create_new_website
+    q = get_job_queue()
+    q.enqueue(q_create_new_website, website.id) # type: ignore
 
-    openstack = get_openstack_connection()
-    openstack_nova_vm = openstack.compute.get_server(openstack_nova_vm_id) # type: ignore
-    openstack.compute.wait_for_server(openstack_nova_vm) # type: ignore
-    
-    ssh_client = create_ssh_client_to_nova_vm(nova_floating_ip)
-    try:
-        # Execute a command on the remote server
-        command = "ls -l"
-        _stdin, stdout, stderr = ssh_client.exec_command(command)
-        print(f"Output: {stdout.read().decode()}")
-        print(f"Error: {stderr.read().decode()}")
+    return website
 
-        # check if instance already has the scripts
-        command = f"test -f instance-scripts.zip && echo 'exist' || echo 'missing'"
-        _stdin, stdout, stderr = ssh_client.exec_command(command)
-        output = stdout.read().decode().strip()
-        if output == "missing":
-            command = f"wget -O instance-scripts.zip {user_code_zip_url}"
-            stdin, stdout, stderr = ssh_client.exec_command(command)
-            print(f"Output: {stdout.read().decode()}")
-            print(f"Error: {stderr.read().decode()}")
-
-            command = "unzip instance-scripts.zip"
-            stdin, stdout, stderr = ssh_client.exec_command(command)
-            print(f"Output: {stdout.read().decode()}")
-            print(f"Error: {stderr.read().decode()}")
-        
-
-         # check if Docker is installed
-        command = "docker --version"
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        output = stdout.read().decode().strip()
-        if not output:
-            command = "source setup-instance.sh"
-            stdin, stdout, stderr = ssh_client.exec_command(command)
-            print(f"Output: {stdout.read().decode()}")
-            print(f"Error: {stderr.read().decode()}")
-
-        command = f"source setup-website-folder.sh '{website_id}' '{user_code_zip_url}' '{DOCKERFILE_URL}' '{DOCKER_COMPOSE_PLAN_URL}'"
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        print(f"Output: {stdout.read().decode()}")
-        print(f"Error: {stderr.read().decode()}")
-
-        command = f"source setup-env.sh './{website_id}' '{USE_CASE}' '{nova_vm_port}' '{website_id}'"
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        print(f"Output: {stdout.read().decode()}")
-        print(f"Error: {stderr.read().decode()}")
-
-        command = f"source run-website.sh '{website_id}'"
-        stdin, stdout, stderr = ssh_client.exec_command(command)
-        print(f"Output: {stdout.read().decode()}")
-        print(f"Error: {stderr.read().decode()}")
-        # Retrieve command output
-
-    except paramiko.SSHException as e:
-        print(f"SSH connection error: {e}")
-    finally:
-        ssh_client.close()
-        print("Connection closed")
-
-    return jsonify({"status": "success", "data": "Nothing"}), 200
-
-def update_website_status(action: WebsiteUpdateAction, id: int):
+def update_website_status(action: WebsiteUpdateAction, website_id: int):
     from app import db
     valid_actions = {"start", "stop", "restart"}
     if action not in valid_actions:
@@ -92,22 +46,22 @@ def update_website_status(action: WebsiteUpdateAction, id: int):
 
     # Determine Nova VM
     nova_vm: NovaVM = Website.join(NovaVM, Website.nova_vm_id == NovaVM.id).filter( # type: ignore
-        Website.id == id
+        Website.id == website_id
     ).first() # type: ignore
 
     if nova_vm is None:
-        raise ValueError(f"No website found with id {id}")
+        raise ValueError(f"No website found with id {website_id}")
 
     nova_floating_ip: str = str(nova_vm.floating_ip) # type: ignore
     
     # Determine website
     website = Website.query.filter_by( # type: ignore
-        id=id
+        id=website_id
     ).first()
     if not website:
-        raise ValueError(f"No website found with id {id}")
+        raise ValueError(f"No website found with id {website_id}")
 
-    cmd = f"docker {action} nodejs-app-{id}"
+    cmd = f"docker {action} nodejs-app-{website_id}"
 
     try:
         if action == "start":
