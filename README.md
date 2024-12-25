@@ -1,5 +1,7 @@
 # OpenStack Cow (Backend)
 
+**AVAILABLE ONLINE TILL DECEMBER 30, 2024** at <http://34.2.131.144:5173/>
+
 - [OpenStack Cow (Backend)](#openstack-cow-backend)
   - [Authors](#authors)
   - [Setup](#setup)
