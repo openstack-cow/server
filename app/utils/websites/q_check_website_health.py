@@ -2,7 +2,7 @@ def q_check_health_of_all_websites() -> None:
     from app import create_app
     app = create_app()
     with app.app_context():
-        from app.models import Website, db
+        from app.models import Website, NovaVM, db
         from app.utils.job_queue import get_job_queue
         from datetime import datetime
         try:
@@ -28,6 +28,23 @@ def q_check_health_of_all_websites() -> None:
                     elif h == "Unhealthy":
                         website.status = "DOWN"
                     website.message = f"Last checked: {datetime.now().isoformat()}"
+            finally:
+                db.session.commit()
+            
+            try:
+                all_websites: list[Website] = Website.query.all() # type: ignore
+                for website in all_websites:
+                    if website.status == "CREATING": # type: ignore
+                        # Inspect Nova VM ; if there is error then deem the website errored also
+                        nova_vm_entry: NovaVM|None = NovaVM.query.get(website.nova_vm_id) # type: ignore
+                        if not nova_vm_entry:
+                            website.status = "ERROR"
+                            website.message = "Nova VM not found"
+                            continue
+                        if nova_vm_entry.status == "ERROR":
+                            website.status = "ERROR"
+                            website.message = "Nova VM errored"
+                            continue
             finally:
                 db.session.commit()
                 db.session.close()

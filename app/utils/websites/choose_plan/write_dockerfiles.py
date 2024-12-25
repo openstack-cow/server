@@ -8,17 +8,21 @@ def write_docker_files(ssh_client: paramiko.SSHClient, plan_name: str, dir_path:
     - "Node.js + MySQL + Redis"
     """
     docker_file_content_by_lines, docker_compose_content_by_lines = render_docker_files(plan_name, website_id, app_port, build_script, start_script)
-    from shlex import quote
+    import os
+
+    dir_path = f"~/{website_id}/"
+    docker_compose_path = os.path.join(dir_path, 'docker-compose.yml')
+    dockerfile_path = os.path.join(dir_path, 'Dockerfile')
+
     commands: list[str] = [
-        f"cd {quote(dir_path)}",
-        f"echo \"\" > docker-compose.yml",
-        f"echo \"\" > Dockerfile",
+        f"echo \"\" > {docker_compose_path}",
+        f"echo \"\" > {dockerfile_path}",
     ]
     commands.extend([
-        f"echo \"{line}\" | tee -a Dockerfile" for line in docker_file_content_by_lines
+        f"echo \"{line}\" | tee -a {dockerfile_path}" for line in docker_file_content_by_lines
     ])
     commands.extend([
-        f"echo \"{line}\" | tee -a docker-compose.yml" for line in docker_compose_content_by_lines
+        f"echo \"{line}\" | tee -a {docker_compose_path}" for line in docker_compose_content_by_lines
     ])
 
     from app.utils.ssh import execute_command

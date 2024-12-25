@@ -1,19 +1,23 @@
 def q_create_new_website(website_id: int) -> None:
+    import logging
+    logging.basicConfig(filename="q_create_new_website.log", level=logging.DEBUG)
     from app import create_app
     app = create_app()
     with app.app_context():
         from app.models import Website, NovaVM, Plan, db
         from app.utils.websites.choose_plan import wait_for_nova_vm_to_be
-        website = Website.query.get(website_id)
+        website: Website|None = Website.query.get(website_id)
         if not website:
             raise ValueError(f"Website with ID {website_id} not found")
         
         try:
+            logging.debug(f"Waiting for Nova VM with entry ID {website.nova_vm_id} to be ready")
             website.status = "CREATING"
             website.message = "Waiting for Nova virtual machine to be ready"
             db.session.commit()
 
             wait_for_nova_vm_to_be(website.nova_vm_id, "ACTIVE")
+            logging.debug(f"VM ready.")
             
             nova_vm_entry: NovaVM = NovaVM.query.get(website.nova_vm_id) # type: ignore
             if not nova_vm_entry:
@@ -23,6 +27,7 @@ def q_create_new_website(website_id: int) -> None:
             if not plan:
                 raise ValueError(f"Plan with ID {website.plan_id} not found")
             
+            logging.debug("Reporting status")
             website.status = "CREATING"
             website.message = "Creating Docker containers"
             db.session.commit()
@@ -30,17 +35,22 @@ def q_create_new_website(website_id: int) -> None:
             nova_floating_ip = nova_vm_entry.floating_ip
             openstack_nova_vm_id = nova_vm_entry.openstack_nova_vm_id
 
+            logging.debug("Connecting to OpenStack Nova")
             from app.utils.openstack_api import get_openstack_connection
             openstack = get_openstack_connection()
             openstack_nova_vm = openstack.compute.get_server(openstack_nova_vm_id) # type: ignore
             openstack.compute.wait_for_server(openstack_nova_vm) # type: ignore
             
+            logging.debug(f"SSH into Nova VM at {nova_floating_ip}")
             from app.utils.ssh import create_ssh_client_to_nova_vm, execute_command
             ssh_client = create_ssh_client_to_nova_vm(nova_floating_ip)
             try:
+                logging.debug("SSH successful")
+                logging.debug("Downloading source code")
                 execute_command(ssh_client, f"mkdir -p ~/{website.id}")
-                execute_command(ssh_client, f"wget -O source-{website.id}.zip {website.user_code_zip_url}")
+                execute_command(ssh_client, f"wget -O source-{website.id}.zip {website.code_zip_url}")
 
+                logging.debug("Extracting source code")
                 # Check if the downloaded file is a zip file
                 out, _err = execute_command(ssh_client, f"file source-{website.id}.zip")
                 try:
@@ -50,7 +60,7 @@ def q_create_new_website(website_id: int) -> None:
                 finally:
                     execute_command(ssh_client, f"rm source-{website.id}.zip")
                 
-                execute_command(ssh_client, f"cd ~/{website.id}")
+                logging.debug("Creating Docker files")
                 from app.utils.websites.choose_plan.write_dockerfiles import write_docker_files
                 write_docker_files(
                     ssh_client,
@@ -62,9 +72,10 @@ def q_create_new_website(website_id: int) -> None:
                     start_script=website.start_script,
                 )
 
-                execute_command(ssh_client, f"cd ~/{website.id}")
-                execute_command(ssh_client, f"sudo docker compose -p website_{website.id} up --build -d")
+                logging.debug("Building and running Docker images")
+                execute_command(ssh_client, f"bash -c \"cd ~/{website.id} && sudo docker compose -p website_{website.id} up --build -d\"")
 
+                logging.debug("Waiting for Node.js container to be ready")
                 website.status = "CREATING"
                 website.message = "Waiting for Node.js container to be ready"
                 db.session.commit()
@@ -75,6 +86,7 @@ def q_create_new_website(website_id: int) -> None:
                 if h == "Unhealthy":
                     raise TimeoutError("Node.js website failed to start in time")
 
+                logging.debug("Exposing port from Docker")
                 website.status = "CREATING"
                 website.message = "Assigning public address"
                 db.session.commit()
@@ -85,6 +97,7 @@ def q_create_new_website(website_id: int) -> None:
                 website.nova_vm_port = nova_vm_port
                 db.session.commit()
 
+                logging.debug("Assigning public port for external access")
                 # Get the public port
                 from app.utils.websites.port_assignment import assign_public_port
                 public_port = assign_public_port(nova_vm_entry.floating_ip, nova_vm_port)
@@ -94,8 +107,10 @@ def q_create_new_website(website_id: int) -> None:
                 db.session.commit()
             finally:
                 ssh_client.close()
+                logging.debug("Finished")
         except Exception as e:
             website.status = "ERROR"
             website.message = str(e)
             db.session.commit()
+            logging.debug(f"Error: {e}")
             raise e

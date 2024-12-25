@@ -46,5 +46,9 @@ def create_app():
     @login_manager.user_loader # type: ignore
     def load_user(id: int): # type: ignore
         return User.query.get(int(id))
+    
+    from app.utils.job_queue import get_job_queue
+    from app.utils.websites.q_check_website_health import q_check_health_of_all_websites
+    get_job_queue().enqueue(q_check_health_of_all_websites) # type: ignore
 
     return app

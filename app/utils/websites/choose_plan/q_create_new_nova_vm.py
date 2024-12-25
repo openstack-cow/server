@@ -11,11 +11,11 @@ def q_create_new_nova_vm(nova_vm_entry_id: int) -> None:
 
     app = create_app()
     with app.app_context():
-        try:
-            nova_vm_entry: NovaVM|None = NovaVM.query.get(nova_vm_entry_id) # type: ignore
-            if not nova_vm_entry:
-                raise ValueError(f"Nova VM with ID {nova_vm_entry_id} not found")
+        nova_vm_entry: NovaVM|None = NovaVM.query.get(nova_vm_entry_id) # type: ignore
+        if not nova_vm_entry:
+            raise ValueError(f"Nova VM with ID {nova_vm_entry_id} not found")
 
+        try:
             conn = get_openstack_connection()
 
             logging.debug(f"Creating Nova VM with ID {nova_vm_entry.id}")
@@ -30,6 +30,9 @@ def q_create_new_nova_vm(nova_vm_entry_id: int) -> None:
             nova_vm = conn.compute.wait_for_server(nova_vm) # type: ignore
 
             logging.debug(f"Nova VM created with ID {nova_vm.id}") # type: ignore
+            nova_vm_entry.openstack_nova_vm_id = nova_vm.id # type: ignore
+            db.session.commit()
+
             logging.debug(f"Nova VM status: {nova_vm.status}") # type: ignore
             logging.debug(f"Getting Nova VM ports...") # type: ignore
             # Get the port ID associated with the VM
@@ -77,9 +80,9 @@ def q_create_new_nova_vm(nova_vm_entry_id: int) -> None:
 
             logging.debug(f"Update the NovaVM entry in the database")
             nova_vm_entry.status = "ACTIVE" # type: ignore
-            nova_vm_entry.floating_ip = floating_ip.floating_ip_address # type: ignore
-            nova_vm_entry.openstack_nova_vm_id = nova_vm.id # type: ignore
             db.session.commit()
         except Exception as e:
             logging.error(f"Failed to create Nova VM: {str(e)}")
-            raise e
+            nova_vm_entry.status = "ERROR" # type: ignore
+            db.session.commit()
+            # raise e
