@@ -1,6 +1,6 @@
-# CryptoToolsLtd
+# OpenStack Cow (Backend)
 
-- [CryptoToolsLtd](#cryptotoolsltd)
+- [OpenStack Cow (Backend)](#openstack-cow-backend)
   - [Authors](#authors)
   - [Setup](#setup)
     - [Running Bare Metal](#running-bare-metal)
@@ -31,10 +31,12 @@ We are a group of students at UET - VNU.
 
 ### Running Bare Metal
 
-That is, you install the required tools straight into your
-own system.
+That is, you install the app as well as the required tools
+straight into your own system.
 
 #### Bare Metal: Prerequisites
+
+- Only run on Linux!
 
 - Python 3.12+
 
@@ -46,7 +48,15 @@ own system.
     sudo apt-get install python3-dev default-libmysqlclient-dev build-essential pkg-config
     ```
 
-    For other distros (and other operating systems), see the full guide at <https://pypi.org/project/mysqlclient/>.
+    For other distros, see the full guide at <https://pypi.org/project/mysqlclient/>.
+
+- The current user (i.e. the user that installs and runs this app) must
+    be in the sudoers file, so that this app could execute some critical
+    commands (e.g. iptables routing) without prompting a password.
+
+    ```sh
+    echo "$(whoami) ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers
+    ```
 
 #### Bare Metal: Install Python Packages
 
@@ -77,30 +87,13 @@ flask db upgrade
 
 #### Bare Metal: Launch the App
 
-Activate the venv if necessary. Then, at the project
-root, execute
+Install pm2. Then, at the project root, run:
 
 ```sh
-flask run --port=8000
+pm2 start ecosystem.config.js
 ```
 
-It should be available at <http://localhost:8000>.
-
-Alternatively, to enable hot-reloading (automatically
-reload the app when file changes are detected), run
-the following command (still after activating venv
-and at the project root):
-
-```sh
-python debug.py
-```
-
-It should also be available at <http://localhost:8000>.
-You can specify a different port:
-
-```sh
-python debug.py 3000
-```
+It should be available at <http://localhost:5002>.
 
 ## Advanced Use
 

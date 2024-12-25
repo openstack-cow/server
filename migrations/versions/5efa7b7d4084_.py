@@ -1,16 +1,16 @@
 """empty message
 
-Revision ID: 0f04a04edebc
+Revision ID: 5efa7b7d4084
 Revises: 
-Create Date: 2024-12-24 10:08:17.431472
+Create Date: 2024-12-24 14:45:42.471297
 
 """
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = '0f04a04edebc'
+revision = '5efa7b7d4084'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -36,6 +36,7 @@ def upgrade():
     sa.Column('has_redis', sa.Boolean(), nullable=False),
     sa.Column('has_mysql', sa.Boolean(), nullable=False),
     sa.Column('monthly_fee_in_usd', sa.Float(), nullable=False),
+    sa.Column('docker_compose_plan_url', mysql.LONGTEXT(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',
