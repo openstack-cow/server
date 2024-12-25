@@ -1,51 +1,12 @@
 from typing import Literal
-from ..models import Website, NovaVM, Plan
-from app.env import NOVA_VM_PRIVATE_KEY_PATH
-import paramiko
-
-def create_ssh_client(floating_ip: str):
-    ssh_client = paramiko.SSHClient()
-    private_key = paramiko.Ed25519Key.from_private_key_file(NOVA_VM_PRIVATE_KEY_PATH)
-
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    ssh_client.connect(floating_ip, port=22, username="ubuntu", pkey=private_key, timeout=120)
-    print(f"Connected to the server at {floating_ip}")
-
-    return ssh_client
+from ...models import Website, NovaVM, Plan
+from app.utils.ssh import create_ssh_client_to_nova_vm, quick_shell_to_nova_vm
+from app.utils.openstack_api import get_openstack_connection
+import time
 
 WebsiteUpdateAction = Literal['start', 'stop', 'restart']
 
-def website_action(action: WebsiteUpdateAction, website_id: int):
-    """
-    Execute action on the Nova VM instance containing the website.
-    """
-    result = Website.join(NovaVM, Website.nova_vm_id == NovaVM.id).filter( # type: ignore
-        Website.id == website_id
-    ).first() # type: ignore
-
-    if result is None:
-        raise ValueError(f"No website found with id {website_id}")
-
-    nova_floating_ip: str = str(result.floating_ip) # type: ignore
-
-    ssh_client = create_ssh_client(nova_floating_ip)
-    try:
-        _stdin, stdout, stderr = ssh_client.exec_command(action)
-
-        output = stdout.read().decode().strip()
-        error = stderr.read().decode().strip()
-
-        if output:
-            print(f"Command Output:\n{output}")
-        if error:
-            print(f"Command Error:\n{error}")
-
-    finally:
-        ssh_client.close()
-        print("Connection closed")
-
-def create_website(
+def create_new_website_in_docker(
     name: str, plan_id: int, user_id: int,
     user_code_zip_url: str, nova_vm_port: int,
 ):
@@ -54,6 +15,18 @@ def create_website(
     if not plan:
         raise ValueError(f"No plan found with id {plan_id}")
     
+    from .choose_plan import select_or_create_nova_instance
+
+    nova_vm_entry = select_or_create_nova_instance(plan_id)
+
+    nova_floating_ip = nova_vm_entry.floating_ip
+    openstack_nova_vm_id = nova_vm_entry.openstack_nova_vm_id
+
+    openstack = get_openstack_connection()
+    openstack_nova_vm = openstack.compute.get_server(openstack_nova_vm_id) # type: ignore
+    openstack.compute.wait_for_server(openstack_nova_vm) # type: ignore
+    
+    ssh_client = create_ssh_client_to_nova_vm(nova_floating_ip)
     try:
         # Execute a command on the remote server
         command = "ls -l"
@@ -111,37 +84,42 @@ def create_website(
 
     return jsonify({"status": "success", "data": "Nothing"}), 200
 
-def update_website_status(id):
+def update_website_status(action: WebsiteUpdateAction, id: int):
+    from app import db
+    valid_actions = {"start", "stop", "restart"}
+    if action not in valid_actions:
+        raise ValueError(f"Invalid action '{action}'. Valid actions are: {valid_actions}")
+
+    # Determine Nova VM
+    nova_vm: NovaVM = Website.join(NovaVM, Website.nova_vm_id == NovaVM.id).filter( # type: ignore
+        Website.id == id
+    ).first() # type: ignore
+
+    if nova_vm is None:
+        raise ValueError(f"No website found with id {id}")
+
+    nova_floating_ip: str = str(nova_vm.floating_ip) # type: ignore
+    
+    # Determine website
+    website = Website.query.filter_by( # type: ignore
+        id=id
+    ).first()
+    if not website:
+        raise ValueError(f"No website found with id {id}")
+
+    cmd = f"docker {action} nodejs-app-{id}"
+
     try:
-        data = request.get_json()
-        action = data.get("action")
-        action_shell= f"docker {action} nodejs-app-{id}"
-        valid_actions = {"start", "stop", "restart"}
-        if action not in valid_actions:
-            return jsonify({"error": f"Invalid action. Valid actions are: {', '.join(valid_actions)}"}), 400
-
-        website = Website.query.filter_by(id=id).first()
-        if not website:
-            return jsonify({"error": "Website not found"}), 404
-
         if action == "start":
-            website.status = "running"
+            website.status = "Starting"
         elif action == "stop":
-            website.status = "stopped"
+            website.status = "Stopping"
         elif action == "restart":
-            website.status = "restarting"
+            website.status = "Restarting"
 
-        nova_vm_shell(action_shell, id)
-        
         db.session.commit()
 
-        return jsonify({
-            "message": f"Action '{action}' performed successfully.",
-            "website_id": website.id,
-            "new_status": website.status
-        }), 200
-
-    except Exception as e:
+        quick_shell_to_nova_vm(nova_floating_ip, cmd)
+    except:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
+        raise
